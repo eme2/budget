@@ -10,16 +10,29 @@ Chaque ligne contient :
 
 | Champ | Description |
 |---|---|
-| **Code opération** | format `année-numéro` (ex : `2025-12`) — normalisé à l'import |
+| **Code opération** | format `année-numéro` (ex : `2025-12`) — normalisé à l'import ; l'année sert au regroupement et à la comparaison |
 | **SDG** | numéro du découpage budgétaire (ex : `22`, `4490`) — cf. référentiel SDG |
 | **Libellé de la dépense** | description |
 | **Sous-type** | ex : réforme, extension, projet particulier |
-| **Budget prévu** | montant prévu |
+| **Budget principal** | première prévision de l'année |
+| **Budget supplémentaire** | ajout / diminution lors de l'étape « budget supplémentaire » (peut être négatif) |
+| **Décision modificative** | ajout / diminution lors de l'étape « décision modificative » (peut être négatif) |
+| **Budget prévu** | *calculé* : principal + supplémentaire + modificative |
 | **Dépense réalisée (engagée)** | montant engagé |
 | **Crédit restant** | *calculé* : Budget prévu − Dépense réalisée |
 | **Quantité prévue** | |
 | **Quantité achetée** | |
-| **Quantité restante** | *calculé* : Quantité prévue − Quantité achetée |
+| **Quantité restante** | *calculée* : Quantité prévue − Quantité achetée |
+| **Commentaire** | historique des évolutions — toute modification d'un montant ou d'une quantité y est tracée automatiquement (`[date] champ : ancien → nouveau`) ; saisie manuelle possible |
+
+Ajout / suppression de lignes : boutons « + Ligne » et « ✕ » sur chaque ligne.
+
+### Suivi annuel
+
+Les lignes sont globalement identiques d'une année à l'autre ; les montants évoluent. L'application conserve toutes les années :
+
+- **Nouvelle année** : saisir l'année source (ex `2025`) et l'année cible (ex `2026`) puis « Copier les lignes » — les libellés, SDG et sous-types sont recopiés, les dépenses, quantités achetées, budgets et commentaires remis à zéro
+- **Comparaison annuelle** (onglet dédié) : sélection de deux années, écarts par ligne et totaux (écart budget, écart dépense), lignes nouvelles ou disparues incluses
 
 ### Référentiel SDG (onglet « Référentiel SDG »)
 
@@ -40,11 +53,11 @@ Une liste détaillée des dépenses est prévue (extension future) ; l'espace de
 
 Ouvrir `index.html` dans un navigateur (double-clic suffit, aucune installation).
 
-- **Saisie** : bouton « + Ligne », édition directe des cellules, sauvegarde automatique
-- **Colonnes calculées** : « Crédit restant » et « Quantité restante » se recalculent seules
-- **Totaux** : ligne de pied de tableau et compteurs (dont crédit restant total)
-- **Importer CSV** : opérations ou référentiel SDG selon l'onglet actif ; séparateur `;` ou `,`, guillemets gérés ; l'import SDG reconnaît les en-têtes de l'outil financier par mots-clés (sdg/code, libellé/intitulé, type/nature, ligne/imputation) ; fusion par clé (code opération + SDG + sous-type, ou code SDG)
-- **Exporter CSV** : fichiers `operations.csv` / `sdg.csv` (BOM UTF-8, s'ouvrent dans Excel)
+- **Saisie** : édition directe des cellules, sauvegarde automatique
+- **Colonnes calculées** : « Budget prévu », « Crédit restant », « Quantité restante »
+- **Traçabilité** : les modifications de budgets / dépenses / quantités sont horodatées dans le commentaire
+- **Importer CSV** : opérations ou référentiel SDG selon l'onglet ; séparateur `;` ou `,` ; fusion par clé (code opération + SDG + sous-type, ou code SDG)
+- **Exporter CSV** : `operations.csv` / `sdg.csv` (BOM UTF-8, s'ouvrent dans Excel)
 - **Tout effacer** : vide le stockage (confirmation demandée)
 
 ## Tests
@@ -55,9 +68,9 @@ npm test
 
 ## Fichiers
 
-- `index.html` — structure de l'interface (onglets Opérations / Référentiel SDG)
+- `index.html` — structure de l'interface (onglets Opérations / Référentiel SDG / Comparaison annuelle)
 - `styles.css` — styles
 - `src/app.js` — logique de l'interface
 - `src/schema.js` — colonnes, champs, calculs dérivés
-- `src/storage.js` — persistance `localStorage`, import/export CSV
+- `src/storage.js` — persistance `localStorage`, import/export CSV, gestion des années
 - `test/` — tests unitaires (`node:test`)

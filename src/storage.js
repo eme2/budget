@@ -1,6 +1,6 @@
 (function (global) {
   const B = global.Budget || (global.Budget = {});
-  const { OPERATION_FIELDS, NUMERIC_FIELDS, toNumber, computeDerived } = B;
+  const { OPERATION_FIELDS, NUMERIC_FIELDS, toNumber, computeDerived, normalizeCode } = B;
 
   const KEYS = {
     operations: 'budget.operations',
@@ -38,11 +38,6 @@
     return record;
   }
 
-  function normalizeCode(code) {
-    const m = String(code).match(/(\d{4})\s*[-/]\s*(\d+)/);
-    return m ? `${m[1]}-${m[2]}` : String(code).trim();
-  }
-
   function normalizeSdgRow(values, header) {
     const get = (names) => {
       for (const n of names) {
@@ -51,11 +46,10 @@
       }
       return '';
     };
-    const type = inferSdgType(get(['type', 'nature']));
     return {
       sdg: String(get(['sdg', 'code'])).trim(),
       libelle: String(get(['libell', 'label', 'intitul']) ?? '').trim(),
-      type,
+      type: inferSdgType(get(['type', 'nature'])),
       ligne_budgetaire: String(get(['ligne', 'budgetaire', 'imputation']) ?? '').trim(),
     };
   }
@@ -149,15 +143,69 @@
     return merged.length;
   }
 
+  function operationsByYear() {
+    const byYear = new Map();
+    for (const row of loadOperations()) {
+      const year = B.operationYear(row.code_operation);
+      if (!byYear.has(year)) byYear.set(year, []);
+      byYear.get(year).push(row);
+    }
+    return byYear;
+  }
+
+  function knownYears() {
+    return [...operationsByYear().keys()].filter(Boolean).sort();
+  }
+
+  function duplicateYear(sourceYear, targetYear, { copyBudgets = true } = {}) {
+    const rows = loadOperations();
+    const source = rows.filter((r) => B.operationYear(r.code_operation) === sourceYear);
+    if (!source.length) throw new Error(`Aucune opération pour l'année ${sourceYear}`);
+    const targetCode = (code) => {
+      const num = code.split('-').slice(1).join('-');
+      return `${targetYear}-${num}`;
+    };
+    const existing = new Set(
+      rows.filter((r) => B.operationYear(r.code_operation) === targetYear)
+        .map((r) => `${r.code_operation}|${r.sdg}|${r.sous_type}`),
+    );
+    const copies = source
+      .filter((r) => !existing.has(`${targetCode(r.code_operation)}|${r.sdg}|${r.sous_type}`))
+      .map((r) => ({
+        ...r,
+        code_operation: targetCode(r.code_operation),
+        budget_principal: copyBudgets ? r.budget_principal : '',
+        budget_supplementaire: copyBudgets ? r.budget_supplementaire : '',
+        decision_modificative: copyBudgets ? r.decision_modificative : '',
+        budget_prevu: copyBudgets ? r.budget_prevu : '',
+        depense_realisee: '',
+        credit_restant: '',
+        quantite_prevue: copyBudgets ? r.quantite_prevue : '',
+        quantite_achetee: '',
+        quantite_restante: '',
+        commentaire: '',
+      }));
+    if (!copies.length) throw new Error(`Les opérations ${targetYear} existent déjà`);
+    saveOperations([...rows, ...copies]);
+    return copies.length;
+  }
+
+  function appendComment(row, text) {
+    const stamp = new Date().toISOString().slice(0, 10);
+    const entry = `[${stamp}] ${text}`;
+    return { ...row, commentaire: row.commentaire ? `${row.commentaire}\n${entry}` : entry };
+  }
+
   function clearOperations() { localStorage.removeItem(KEYS.operations); }
   function clearSdg() { localStorage.removeItem(KEYS.sdg); }
   function clearDepenses() { localStorage.removeItem(KEYS.depenses); }
 
   Object.assign(B, {
     KEYS, loadOperations, saveOperations, loadSdg, saveSdg, loadDepenses, saveDepenses,
-    normalizeOperation, normalizeCode, normalizeSdgRow, inferSdgType,
+    normalizeOperation, normalizeSdgRow, inferSdgType,
     parseCsv, escapeCsv, toCsv, toOperationsCsv, toSdgCsv,
-    importOperations, importSdg, clearOperations, clearSdg, clearDepenses,
+    importOperations, importSdg, operationsByYear, knownYears, duplicateYear, appendComment,
+    clearOperations, clearSdg, clearDepenses,
   });
 
   if (typeof module !== 'undefined' && module.exports) module.exports = B;

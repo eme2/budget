@@ -12,6 +12,7 @@
   <nav class="tabs">
     <button type="button" class="tab active" data-tab="operations">Opérations</button>
     <button type="button" class="tab" data-tab="sdg">Référentiel SDG</button>
+    <button type="button" class="tab" data-tab="comparaison">Comparaison annuelle</button>
   </nav>
 </header>
 <main>
@@ -21,6 +22,13 @@
       <input type="file" id="op-file-input" accept=".csv,.txt">
       <button type="button" id="export-ops">Exporter CSV</button>
       <button type="button" id="add-op" class="primary">+ Ligne</button>
+      <span class="spacer"></span>
+      <label for="duplicate-source">Nouvelle année :</label>
+      <input type="text" id="duplicate-source" placeholder="2025" size="5">
+      <span>→</span>
+      <input type="text" id="duplicate-target" placeholder="2026" size="5">
+      <button type="button" id="duplicate-year">Copier les lignes</button>
+      <span class="spacer"></span>
       <button type="button" id="clear-ops" class="danger">Tout effacer</button>
     </div>
     <div class="totals" id="op-totals"></div>
@@ -42,6 +50,21 @@
     <table>
       <thead><tr id="sdg-head"></tr></thead>
       <tbody id="sdg-body"></tbody>
+    </table>
+  </section>
+
+  <section class="panel" data-panel="comparaison">
+    <div class="toolbar">
+      <label for="cmp-year-a">Comparer</label>
+      <select id="cmp-year-a"></select>
+      <span>avec</span>
+      <select id="cmp-year-b"></select>
+    </div>
+    <div class="totals" id="cmp-totals"></div>
+    <table>
+      <thead><tr id="cmp-head"></tr></thead>
+      <tbody id="cmp-body"></tbody>
+      <tfoot><tr id="cmp-foot"></tr></tfoot>
     </table>
   </section>
 </main>
