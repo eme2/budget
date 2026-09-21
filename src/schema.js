@@ -66,39 +66,19 @@ export function computeDerived(row) {
   const result = { ...row };
   for (const [field, fn] of Object.entries(COMPUTED)) {
     const deps = COMPUTED_DEPS[field];
-    if (deps.every((k) => row[k] !== null && row[k] !== undefined)) {
-      result[field] = fn(row);
+    if (deps.every((k) => row[k] !== null && row[k] !== undefined && row[k] !== '')) {
+      result[field] = fn(result);
     }
   }
   return result;
 }
 
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS operations (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  code_operation TEXT,
-  libelle_operation TEXT,
-  sdg TEXT,
-  type_achat TEXT,
-  budget_valide_a REAL,
-  budget_initial REAL,
-  qtes_validees_a REAL,
-  engage_hors_rar REAL,
-  reste_a_engager REAL,
-  besoins REAL,
-  commentaire_a TEXT,
-  bs REAL,
-  commentaire_bs TEXT,
-  nb_acquis REAL,
-  dm REAL,
-  commentaire_dm TEXT,
-  montant_acquis REAL,
-  UNIQUE (code_operation, sdg, type_achat)
-);
-CREATE INDEX IF NOT EXISTS idx_operations_code ON operations (code_operation);
-CREATE INDEX IF NOT EXISTS idx_operations_sdg ON operations (sdg);
-`;
+export function emptyRow() {
+  return Object.fromEntries(FIELDS.map((f) => [f, '']));
+}
 
-export function initDb(db) {
-  db.exec(SCHEMA);
+export function toNumber(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Number(String(value).replace(',', '.'));
+  return Number.isFinite(n) ? n : null;
 }
