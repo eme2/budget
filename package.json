@@ -1,0 +1,32 @@
+{
+  "name": "budget",
+  "version": "0.1.0",
+  "description": "Gestion d'un budget",
+  "main": "src/import.js",
+  "scripts": {
+    "test": "node --test",
+    "import": "node src/import.js",
+    "generate": "node src/generateTemplate.js",
+    "db:init": "node src/db.js init",
+    "db:import": "node src/db.js import --file budget.xlsx",
+    "db:export": "node src/db.js export --file budget.xlsx",
+    "db:export:csv": "node src/db.js export --file budget.csv"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eme2/budget.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/eme2/budget/issues"
+  },
+  "homepage": "https://github.com/eme2/budget#readme",
+  "type": "module",
+  "dependencies": {
+    "better-sqlite3": "^13.0.3",
+    "csv-writer": "^1.6.0",
+    "exceljs": "^4.4.0"
+  }
+}
