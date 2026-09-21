@@ -1,12 +1,15 @@
 (function (global) {
   const B = global.Budget || (global.Budget = {});
-  const { FIELDS, NUMERIC_FIELDS, toNumber, computeDerived } = B;
-  const COLUMNS = B.COLUMNS;
+  const { OPERATION_FIELDS, NUMERIC_FIELDS, toNumber, computeDerived } = B;
 
-  const STORAGE_KEY = 'budget.operations';
+  const KEYS = {
+    operations: 'budget.operations',
+    sdg: 'budget.sdg',
+    depenses: 'budget.depenses',
+  };
 
-  function loadOperations() {
-    const raw = localStorage.getItem(STORAGE_KEY);
+  function loadJson(key) {
+    const raw = localStorage.getItem(key);
     if (!raw) return [];
     try {
       const parsed = JSON.parse(raw);
@@ -16,19 +19,53 @@
     }
   }
 
-  function saveOperations(rows) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rows));
-  }
+  function loadOperations() { return loadJson(KEYS.operations); }
+  function saveOperations(rows) { localStorage.setItem(KEYS.operations, JSON.stringify(rows)); }
+  function loadSdg() { return loadJson(KEYS.sdg); }
+  function saveSdg(rows) { localStorage.setItem(KEYS.sdg, JSON.stringify(rows)); }
+  function loadDepenses() { return loadJson(KEYS.depenses); }
+  function saveDepenses(rows) { localStorage.setItem(KEYS.depenses, JSON.stringify(rows)); }
 
-  function normalizeRecord(values) {
+  function normalizeOperation(values) {
     const record = {};
-    FIELDS.forEach((field, i) => {
+    OPERATION_FIELDS.forEach((field, i) => {
       const raw = values[i];
       if (raw !== null && raw !== undefined && raw !== '') {
         record[field] = NUMERIC_FIELDS.has(field) ? toNumber(raw) : String(raw).trim();
       }
     });
+    if (record.code_operation) record.code_operation = normalizeCode(record.code_operation);
     return record;
+  }
+
+  function normalizeCode(code) {
+    const m = String(code).match(/(\d{4})\s*[-/]\s*(\d+)/);
+    return m ? `${m[1]}-${m[2]}` : String(code).trim();
+  }
+
+  function normalizeSdgRow(values, header) {
+    const get = (names) => {
+      for (const n of names) {
+        const i = header.findIndex((h) => h.toLowerCase().includes(n));
+        if (i !== -1 && values[i] !== '' && values[i] !== undefined) return values[i];
+      }
+      return '';
+    };
+    const type = inferSdgType(get(['type', 'nature']));
+    return {
+      sdg: String(get(['sdg', 'code'])).trim(),
+      libelle: String(get(['libell', 'label', 'intitul']) ?? '').trim(),
+      type,
+      ligne_budgetaire: String(get(['ligne', 'budgetaire', 'imputation']) ?? '').trim(),
+    };
+  }
+
+  function inferSdgType(raw) {
+    if (!raw) return '';
+    const s = String(raw).toLowerCase();
+    if (s.startsWith('fonct') || s === 'f' || s.includes('courant')) return 'Fonctionnement';
+    if (s.startsWith('invest') || s === 'i' || s.includes('capital') || s.includes('immobilis')) return 'Investissement';
+    return String(raw).trim();
   }
 
   function detectSeparator(text) {
@@ -67,22 +104,31 @@
     return rows;
   }
 
-  function toCsv(rows) {
-    const escape = (v) => {
-      const s = v === null || v === undefined ? '' : String(v);
-      return /["\n,;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
-    };
-    const lines = [COLUMNS.map(escape).join(';')];
+  function escapeCsv(v) {
+    const s = v === null || v === undefined ? '' : String(v);
+    return /["\n,;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function toCsv(columns, fields, rows) {
+    const lines = [columns.map(escapeCsv).join(';')];
     for (const row of rows) {
       const derived = computeDerived(row);
-      lines.push(FIELDS.map((f) => escape(derived[f])).join(';'));
+      lines.push(fields.map((f) => escapeCsv(derived[f])).join(';'));
     }
     return lines.join('\r\n') + '\r\n';
   }
 
-  function importRows(records) {
+  function toOperationsCsv(rows) {
+    return toCsv(B.OPERATION_COLUMNS, B.OPERATION_FIELDS, rows);
+  }
+
+  function toSdgCsv(rows) {
+    return toCsv(B.SDG_COLUMNS, B.SDG_FIELDS, rows);
+  }
+
+  function importOperations(records) {
     const existing = loadOperations();
-    const key = (r) => `${r.code_operation || ''}|${r.sdg || ''}|${r.type_achat || ''}`;
+    const key = (r) => `${r.code_operation || ''}|${r.sdg || ''}|${r.sous_type || ''}`;
     const byKey = new Map(existing.map((r) => [key(r), r]));
     for (const record of records) {
       byKey.set(key(record), { ...byKey.get(key(record)), ...record });
@@ -92,11 +138,27 @@
     return merged.length;
   }
 
-  function clearOperations() {
-    localStorage.removeItem(STORAGE_KEY);
+  function importSdg(records) {
+    const existing = loadSdg();
+    const bySdg = new Map(existing.map((r) => [r.sdg, r]));
+    for (const record of records) {
+      bySdg.set(record.sdg, { ...bySdg.get(record.sdg), ...record });
+    }
+    const merged = [...bySdg.values()];
+    saveSdg(merged);
+    return merged.length;
   }
 
-  Object.assign(B, { loadOperations, saveOperations, normalizeRecord, parseCsv, toCsv, importRows, clearOperations });
+  function clearOperations() { localStorage.removeItem(KEYS.operations); }
+  function clearSdg() { localStorage.removeItem(KEYS.sdg); }
+  function clearDepenses() { localStorage.removeItem(KEYS.depenses); }
+
+  Object.assign(B, {
+    KEYS, loadOperations, saveOperations, loadSdg, saveSdg, loadDepenses, saveDepenses,
+    normalizeOperation, normalizeCode, normalizeSdgRow, inferSdgType,
+    parseCsv, escapeCsv, toCsv, toOperationsCsv, toSdgCsv,
+    importOperations, importSdg, clearOperations, clearSdg, clearDepenses,
+  });
 
   if (typeof module !== 'undefined' && module.exports) module.exports = B;
 })(typeof window !== 'undefined' ? window : globalThis);

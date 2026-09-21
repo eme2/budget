@@ -1,88 +1,75 @@
 (function (global) {
   const B = global.Budget || (global.Budget = {});
 
-  const COLUMNS = [
+  const OPERATION_COLUMNS = [
     'Code opération',
-    'Libellé opération',
     'SDG',
-    "Types d'achat",
-    'Budget validé A (acquisitions)',
-    'Budget initial',
-    'Qtés validées A (à acquérir)',
-    'Engagé (sans compter le RAR)',
-    'Reste à engager',
-    'Besoins + ou -',
-    'Commentaire A',
-    'BS',
-    'Commentaire BS',
-    'Nb Acquis',
-    'DM',
-    'Commentaire DM',
-    'Montant acquis',
+    'Libellé de la dépense',
+    'Sous-type',
+    'Budget prévu',
+    'Dépense réalisée (engagée)',
+    'Crédit restant',
+    'Quantité prévue',
+    'Quantité achetée',
+    'Quantité restante',
   ];
 
-  const FIELDS = [
+  const OPERATION_FIELDS = [
     'code_operation',
-    'libelle_operation',
     'sdg',
-    'type_achat',
-    'budget_valide_a',
-    'budget_initial',
-    'qtes_validees_a',
-    'engage_hors_rar',
-    'reste_a_engager',
-    'besoins',
-    'commentaire_a',
-    'bs',
-    'commentaire_bs',
-    'nb_acquis',
-    'dm',
-    'commentaire_dm',
-    'montant_acquis',
+    'libelle',
+    'sous_type',
+    'budget_prevu',
+    'depense_realisee',
+    'credit_restant',
+    'quantite_prevue',
+    'quantite_achetee',
+    'quantite_restante',
   ];
 
   const NUMERIC_FIELDS = new Set([
-    'budget_valide_a',
-    'budget_initial',
-    'qtes_validees_a',
-    'engage_hors_rar',
-    'reste_a_engager',
-    'besoins',
-    'bs',
-    'nb_acquis',
-    'dm',
-    'montant_acquis',
+    'budget_prevu',
+    'depense_realisee',
+    'credit_restant',
+    'quantite_prevue',
+    'quantite_achetee',
+    'quantite_restante',
   ]);
 
-  const COMPUTED_DEPS = {
-    reste_a_engager: ['budget_valide_a', 'engage_hors_rar'],
-    besoins: ['qtes_validees_a', 'nb_acquis'],
-  };
+  const COMPUTED = ['credit_restant', 'quantite_restante'];
+
+  function toNumber(value) {
+    if (value === null || value === undefined || value === '') return null;
+    const n = Number(String(value).replace(',', '.').replace(/\s/g, ''));
+    return Number.isFinite(n) ? n : null;
+  }
 
   function computeDerived(row) {
     const result = { ...row };
-    if (result.budget_valide_a !== '' && result.budget_valide_a !== null && result.budget_valide_a !== undefined &&
-        result.engage_hors_rar !== '' && result.engage_hors_rar !== null && result.engage_hors_rar !== undefined) {
-      result.reste_a_engager = Number(result.budget_valide_a) - Number(result.engage_hors_rar);
+    if (toNumber(result.budget_prevu) !== null && toNumber(result.depense_realisee) !== null) {
+      result.credit_restant = toNumber(result.budget_prevu) - toNumber(result.depense_realisee);
     }
-    if (result.qtes_validees_a !== '' && result.qtes_validees_a !== null && result.qtes_validees_a !== undefined &&
-        result.nb_acquis !== '' && result.nb_acquis !== null && result.nb_acquis !== undefined) {
-      result.besoins = Number(result.qtes_validees_a) - Number(result.nb_acquis);
+    if (toNumber(result.quantite_prevue) !== null && toNumber(result.quantite_achetee) !== null) {
+      result.quantite_restante = toNumber(result.quantite_prevue) - toNumber(result.quantite_achetee);
     }
     return result;
   }
 
-  function emptyRow() {
-    return Object.fromEntries(FIELDS.map((f) => [f, '']));
+  const SDG_TYPES = ['Fonctionnement', 'Investissement'];
+
+  const SDG_COLUMNS = ['SDG', 'Libellé', 'Type', 'Ligne budgétaire'];
+  const SDG_FIELDS = ['sdg', 'libelle', 'type', 'ligne_budgetaire'];
+  const SDG_TYPES_SET = SDG_TYPES;
+
+  function emptyOperation() {
+    return Object.fromEntries(OPERATION_FIELDS.map((f) => [f, '']));
   }
 
-  function toNumber(value) {
-    if (value === null || value === undefined || value === '') return null;
-    const n = Number(String(value).replace(',', '.'));
-    return Number.isFinite(n) ? n : null;
-  }
-
-  Object.assign(B, { COLUMNS, FIELDS, NUMERIC_FIELDS, COMPUTED_DEPS, computeDerived, emptyRow, toNumber });
+  Object.assign(B, {
+    OPERATION_COLUMNS, OPERATION_FIELDS, NUMERIC_FIELDS, COMPUTED,
+    SDG_TYPES, SDG_COLUMNS, SDG_FIELDS, SDG_TYPES_SET,
+    toNumber, computeDerived, emptyOperation,
+  });
 
   if (typeof module !== 'undefined' && module.exports) module.exports = B;
 })(typeof window !== 'undefined' ? window : globalThis);
