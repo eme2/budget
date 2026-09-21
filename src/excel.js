@@ -56,20 +56,24 @@ export async function generateTemplate(filePath) {
   return filePath;
 }
 
+function isEmptyValue(v) {
+  return v === null || v === undefined || v === '';
+}
+
 export function rowsFromWorksheet(ws) {
-  const header = ws.getRow(1).values.slice(1);
   const rows = [];
   ws.eachRow((row, rowNumber) => {
     if (rowNumber === 1) return;
     const values = row.values.slice(1);
-    if (values.every((v) => v === null || v === undefined || v === '')) return;
+    if (values.every((v, i) => isEmptyValue(v) || [9, 10].includes(i + 1) || typeof v === 'object')) return;
     const record = {};
     FIELDS.forEach((field, i) => {
       const raw = values[i];
-      if (raw !== null && raw !== undefined && raw !== '') {
+      if (!isEmptyValue(raw) && typeof raw !== 'object') {
         record[field] = NUMERIC_FIELDS.has(field) ? Number(raw) : String(raw).trim();
       }
     });
+    if (Object.keys(record).length === 0) return;
     rows.push(record);
   });
   return rows;
