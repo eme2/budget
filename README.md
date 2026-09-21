@@ -12,12 +12,12 @@ Code opération, Libellé opération, SDG, Types d'achat, Budget validé A (acqu
 
 ## Utilisation
 
-Ouvrir `index.html` dans un navigateur (double-clic suffit, aucune installation).
+Ouvrir `index.html` dans un navigateur (double-clic suffit, aucune installation — scripts classiques, fonctionne en `file://`).
 
 - **Saisie** : bouton « + Ligne », puis édition directe des cellules ; sauvegarde automatique dans le navigateur
 - **Colonnes calculées** : « Reste à engager » et « Besoins + ou - » se recalculent seules
 - **Totaux** : ligne de pied de tableau et compteur en haut
-- **Importer CSV** : bouton dans l'en-tête — accepte un export Excel/CSV (séparateur `;` ou `,`, guillemets gérés) ; fusion par clé (code opération + SDG + type d'achat)
+- **Importer CSV** : accepte un export Excel/CSV (séparateur `;` ou `,`, guillemets gérés) ; fusion par clé (code opération + SDG + type d'achat)
 - **Exporter CSV** : télécharge `budget.csv` (avec BOM UTF-8, s'ouvre directement dans Excel)
 - **Tout effacer** : vide le stockage du navigateur (confirmation demandée)
 
@@ -29,7 +29,9 @@ npm test
 
 ## Fichiers
 
-- `index.html` — interface (table éditable, import/export, totaux)
+- `index.html` — structure de l'interface
+- `styles.css` — styles de l'interface
+- `src/app.js` — logique de l'interface (table éditable, import/export, totaux)
 - `src/schema.js` — colonnes, champs, calculs dérivés
 - `src/storage.js` — persistance `localStorage`, analyse et génération CSV
 - `test/` — tests unitaires (`node:test`)
