@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { COLUMNS, FIELDS } from '../src/schema.js';
-import { parseCsv, toCsv, normalizeRecord, importRows, exportRows, loadOperations, saveOperations, clearOperations } from '../src/storage.js';
+import '../src/schema.js';
+import '../src/storage.js';
+
+const { COLUMNS, FIELDS } = globalThis.Budget;
+const { parseCsv, toCsv, normalizeRecord, importRows, loadOperations, clearOperations } = globalThis.Budget;
 
 function setupStorage() {
   const store = new Map();
@@ -41,7 +44,7 @@ test('toCsv + parseCsv round-trip avec en-têtes', () => {
   setupStorage();
   clearOperations();
   importRows([normalizeRecord(['OP-1', 'A;b', 'DSI', 'Info', '100', '120', '5', '60', '', '', 'c', '2', 'ok', '3', '1', 'livré', '60'])]);
-  const csv = toCsv(exportRows());
+  const csv = toCsv(loadOperations());
   const parsed = parseCsv(csv);
   assert.equal(parsed.length, 2);
   assert.equal(parsed[0].length, COLUMNS.length);

@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { COLUMNS, FIELDS, NUMERIC_FIELDS, computeDerived, emptyRow, toNumber } from '../src/schema.js';
+import '../src/schema.js';
+
+const { COLUMNS, FIELDS, NUMERIC_FIELDS, computeDerived, emptyRow, toNumber } = globalThis.Budget;
 
 test('les 17 colonnes et champs sont alignés', () => {
   assert.equal(COLUMNS.length, 17);
@@ -27,7 +29,7 @@ test('computeDerived laisse vide si données manquantes', () => {
 
 test('toNumber gère les formats FR et EN', () => {
   assert.equal(toNumber('100000'), 100000);
-  assert.equal(toNumber('1 234,5'.replace(' ', '')), 1234.5);
+  assert.equal(toNumber('1234,5'), 1234.5);
   assert.equal(toNumber('abc'), null);
   assert.equal(toNumber(''), null);
 });

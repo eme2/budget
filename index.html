@@ -4,37 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Budget — Gestion des opérations</title>
-<style>
-  :root { --header: #4472C4; --border: #d0d0d0; }
-  * { box-sizing: border-box; }
-  body { font-family: system-ui, sans-serif; margin: 0; background: #f5f6f8; color: #222; }
-  header { background: var(--header); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-  header h1 { font-size: 18px; margin: 0; flex: 1; }
-  button { padding: 6px 14px; border: 1px solid var(--border); border-radius: 4px; background: #fff; cursor: pointer; font-size: 13px; }
-  button:hover { background: #eef1f7; }
-  button.danger { color: #b00; }
-  main { padding: 16px 20px; overflow-x: auto; }
-  .toolbar { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
-  #file-input { display: none; }
-  table { border-collapse: collapse; width: max-content; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
-  th, td { border: 1px solid var(--border); padding: 4px 6px; font-size: 13px; min-width: 70px; }
-  th { background: var(--header); color: #fff; position: sticky; top: 0; text-align: center; font-weight: 600; white-space: nowrap; }
-  th.rowhead { left: 0; z-index: 2; }
-  td input { width: 100%; border: none; padding: 2px; font: inherit; background: transparent; }
-  td input:focus { outline: 2px solid var(--header); outline-offset: -2px; }
-  td.computed { background: #f0f4ec; text-align: right; white-space: nowrap; }
-  td.numeric input { text-align: right; }
-  td.rowactions { text-align: center; white-space: nowrap; }
-  td.rowactions button { padding: 1px 7px; font-size: 12px; }
-  tfoot td { font-weight: bold; background: #eef1f7; text-align: right; }
-  .totals { margin: 10px 0; font-size: 13px; color: #444; }
-  .msg { position: fixed; bottom: 16px; right: 16px; background: #333; color: #fff; padding: 8px 16px; border-radius: 4px; font-size: 13px; display: none; }
-</style>
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header>
   <h1>Budget — opérations d'acquisition</h1>
-  <label for="file-input"><button type="button" onclick="document.getElementById('file-input').click()">Importer CSV</button></label>
+  <label for="file-input"><button type="button" id="import-csv">Importer CSV</button></label>
   <input type="file" id="file-input" accept=".csv,.txt">
   <button id="export-csv">Exporter CSV</button>
   <button id="add-row" class="primary">+ Ligne</button>
@@ -50,144 +25,8 @@
 </main>
 <div class="msg" id="msg"></div>
 
-<script type="module">
-import { COLUMNS, FIELDS, NUMERIC_FIELDS, computeDerived, emptyRow } from './schema.js';
-import { loadOperations, saveOperations, normalizeRecord, parseCsv, toCsv, importRows, exportRows, clearOperations } from './storage.js';
-
-const body = document.getElementById('table-body');
-const headRow = document.getElementById('head-row');
-const footRow = document.getElementById('foot-row');
-const msg = document.getElementById('msg');
-const isComputed = (f) => f === 'reste_a_engager' || f === 'besoins';
-
-COLUMNS.forEach((name, i) => {
-  const th = document.createElement('th');
-  th.textContent = name;
-  th.title = name;
-  headRow.appendChild(th);
-});
-const actionTh = document.createElement('th');
-actionTh.textContent = '';
-headRow.appendChild(actionTh);
-
-function notify(text) {
-  msg.textContent = text;
-  msg.style.display = 'block';
-  setTimeout(() => { msg.style.display = 'none'; }, 2500);
-}
-
-function render() {
-  const rows = loadOperations();
-  body.innerHTML = '';
-  const sums = Object.fromEntries(FIELDS.filter((f) => NUMERIC_FIELDS.has(f)).map((f) => [f, 0]));
-  rows.forEach((row, rowIndex) => {
-    const derived = computeDerived(row);
-    const tr = document.createElement('tr');
-    FIELDS.forEach((field, i) => {
-      const td = document.createElement('td');
-      if (isComputed(field)) {
-        td.className = 'computed';
-        td.textContent = derived[field] ?? '';
-      } else {
-        if (NUMERIC_FIELDS.has(field)) td.className = 'numeric';
-        const input = document.createElement('input');
-        input.value = row[field] ?? '';
-        input.addEventListener('change', () => {
-          const rows = loadOperations();
-          rows[rowIndex][field] = input.value;
-          saveOperations(rows);
-          render();
-        });
-        td.appendChild(input);
-      }
-      tr.appendChild(td);
-      if (NUMERIC_FIELDS.has(field) && typeof derived[field] === 'number') {
-        sums[field] += derived[field];
-      }
-    });
-    const tdAction = document.createElement('td');
-    tdAction.className = 'rowactions';
-    const del = document.createElement('button');
-    del.textContent = '✕';
-    del.title = 'Supprimer la ligne';
-    del.addEventListener('click', () => {
-      const rows = loadOperations();
-      rows.splice(rowIndex, 1);
-      saveOperations(rows);
-      render();
-    });
-    tdAction.appendChild(del);
-    tr.appendChild(tdAction);
-    body.appendChild(tr);
-  });
-  footRow.innerHTML = '';
-  FIELDS.forEach((field) => {
-    const td = document.createElement('td');
-    if (NUMERIC_FIELDS.has(field)) {
-      const v = sums[field];
-      td.textContent = v ? v.toLocaleString('fr-FR') : '';
-    }
-    footRow.appendChild(td);
-  });
-  footRow.appendChild(document.createElement('td'));
-  const nb = rows.length;
-  document.getElementById('totals').textContent =
-    nb + (nb > 1 ? ' opérations' : ' opération') +
-    ' — Reste à engager total : ' +
-    (sums.reste_a_engager || 0).toLocaleString('fr-FR');
-}
-
-document.getElementById('add-row').addEventListener('click', () => {
-  const rows = loadOperations();
-  rows.push(emptyRow());
-  saveOperations(rows);
-  render();
-});
-
-document.getElementById('clear-all').addEventListener('click', () => {
-  if (rowsCount() === 0 || confirm('Effacer toutes les opérations du stockage du navigateur ?')) {
-    clearOperations();
-    render();
-  }
-});
-
-function rowsCount() { return loadOperations().length; }
-
-document.getElementById('export-csv').addEventListener('click', () => {
-  const csv = toCsv(loadOperations());
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'budget.csv';
-  a.click();
-  URL.revokeObjectURL(a.href);
-  notify('Export CSV téléchargé');
-});
-
-document.getElementById('file-input').addEventListener('change', async (event) => {
-  const file = event.target.files[0];
-  if (!file) return;
-  const text = await file.text();
-  const lines = parseCsv(text);
-  if (lines.length < 2) { notify('Fichier vide ou illisible'); return; }
-  const header = lines[0].map((h) => h.trim());
-  const matches = COLUMNS.every((c, i) => (header[i] || '').startsWith(c.split(' (')[0].slice(0, 8)));
-  const order = matches ? COLUMNS.map((c, i) => i) : null;
-  let records = [];
-  if (matches) {
-    records = lines.slice(1).map(normalizeRecord);
-  } else {
-    const idx = COLUMNS.map((c) => header.indexOf(c));
-    if (idx.some((i) => i === -1)) { notify('En-têtes non reconnus'); return; }
-    records = lines.slice(1).map((values) => normalizeRecord(idx.map((i) => values[i])));
-  }
-  const count = importRows(records);
-  render();
-  notify(count + ' opérations importées');
-  event.target.value = '';
-});
-
-render();
-</script>
+<script src="src/schema.js"></script>
+<script src="src/storage.js"></script>
+<script src="src/app.js"></script>
 </body>
 </html>

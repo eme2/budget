@@ -1,0 +1,24 @@
+:root { --header: #4472C4; --border: #d0d0d0; }
+* { box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; margin: 0; background: #f5f6f8; color: #222; }
+header { background: var(--header); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+header h1 { font-size: 18px; margin: 0; flex: 1; }
+button { padding: 6px 14px; border: 1px solid var(--border); border-radius: 4px; background: #fff; cursor: pointer; font-size: 13px; }
+button:hover { background: #eef1f7; }
+button.danger { color: #b00; }
+main { padding: 16px 20px; overflow-x: auto; }
+.toolbar { display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+#file-input { display: none; }
+table { border-collapse: collapse; width: max-content; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+th, td { border: 1px solid var(--border); padding: 4px 6px; font-size: 13px; min-width: 70px; }
+th { background: var(--header); color: #fff; position: sticky; top: 0; text-align: center; font-weight: 600; white-space: nowrap; }
+th.rowhead { left: 0; z-index: 2; }
+td input { width: 100%; border: none; padding: 2px; font: inherit; background: transparent; }
+td input:focus { outline: 2px solid var(--header); outline-offset: -2px; }
+td.computed { background: #f0f4ec; text-align: right; white-space: nowrap; }
+td.numeric input { text-align: right; }
+td.rowactions { text-align: center; white-space: nowrap; }
+td.rowactions button { padding: 1px 7px; font-size: 12px; }
+tfoot td { font-weight: bold; background: #eef1f7; text-align: right; }
+.totals { margin: 10px 0; font-size: 13px; color: #444; }
+.msg { position: fixed; bottom: 16px; right: 16px; background: #333; color: #fff; padding: 8px 16px; border-radius: 4px; font-size: 13px; display: none; }
