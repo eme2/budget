@@ -1,4 +1,11 @@
-:root { --header: #4472C4; --border: #d0d0d0; }
+:root { --header: #4472C4; --border: #d0d0d0; --accent: #5b9bd5; }
+.tabs { display: flex; gap: 8px; }
+.tab { background: rgba(255,255,255,.15); color: #fff; border-color: rgba(255,255,255,.3); }
+.tab.active { background: #fff; color: var(--header); font-weight: 600; }
+.panel { display: none; }
+.panel.active { display: block; }
+select { font: inherit; padding: 2px; border: none; background: transparent; }
+td select:focus { outline: 2px solid var(--header); outline-offset: -2px; }
 * { box-sizing: border-box; }
 body { font-family: system-ui, sans-serif; margin: 0; background: #f5f6f8; color: #222; }
 header { background: var(--header); color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
@@ -16,6 +23,7 @@ th.rowhead { left: 0; z-index: 2; }
 td input { width: 100%; border: none; padding: 2px; font: inherit; background: transparent; }
 td input:focus { outline: 2px solid var(--header); outline-offset: -2px; }
 td.computed { background: #f0f4ec; text-align: right; white-space: nowrap; }
+td.sdg { text-align: center; white-space: nowrap; font-weight: 600; }
 td.numeric input { text-align: right; }
 td.rowactions { text-align: center; white-space: nowrap; }
 td.rowactions button { padding: 1px 7px; font-size: 12px; }

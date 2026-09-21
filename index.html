@@ -9,19 +9,41 @@
 <body>
 <header>
   <h1>Budget — opérations d'acquisition</h1>
-  <label for="file-input"><button type="button" id="import-csv">Importer CSV</button></label>
-  <input type="file" id="file-input" accept=".csv,.txt">
-  <button id="export-csv">Exporter CSV</button>
-  <button id="add-row" class="primary">+ Ligne</button>
-  <button id="clear-all" class="danger">Tout effacer</button>
+  <nav class="tabs">
+    <button type="button" class="tab active" data-tab="operations">Opérations</button>
+    <button type="button" class="tab" data-tab="sdg">Référentiel SDG</button>
+  </nav>
 </header>
 <main>
-  <div class="totals" id="totals"></div>
-  <table id="budget-table">
-    <thead><tr id="head-row"></tr></thead>
-    <tbody id="table-body"></tbody>
-    <tfoot><tr id="foot-row"></tr></tfoot>
-  </table>
+  <section class="panel active" data-panel="operations">
+    <div class="toolbar">
+      <label for="op-file-input"><button type="button" id="import-ops" onclick="document.getElementById('op-file-input').click()">Importer CSV</button></label>
+      <input type="file" id="op-file-input" accept=".csv,.txt">
+      <button type="button" id="export-ops">Exporter CSV</button>
+      <button type="button" id="add-op" class="primary">+ Ligne</button>
+      <button type="button" id="clear-ops" class="danger">Tout effacer</button>
+    </div>
+    <div class="totals" id="op-totals"></div>
+    <table>
+      <thead><tr id="op-head"></tr></thead>
+      <tbody id="op-body"></tbody>
+      <tfoot><tr id="op-foot"></tr></tfoot>
+    </table>
+  </section>
+
+  <section class="panel" data-panel="sdg">
+    <div class="toolbar">
+      <label for="sdg-file-input"><button type="button" id="import-sdg" onclick="document.getElementById('sdg-file-input').click()">Importer CSV</button></label>
+      <input type="file" id="sdg-file-input" accept=".csv,.txt">
+      <button type="button" id="export-sdg">Exporter CSV</button>
+      <button type="button" id="clear-sdg" class="danger">Tout effacer</button>
+    </div>
+    <div class="totals" id="sdg-totals"></div>
+    <table>
+      <thead><tr id="sdg-head"></tr></thead>
+      <tbody id="sdg-body"></tbody>
+    </table>
+  </section>
 </main>
 <div class="msg" id="msg"></div>
 
