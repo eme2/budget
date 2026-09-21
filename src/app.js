@@ -1,3 +1,15 @@
+/**
+ * Logique de l'interface : rendu des tableaux, interactions et import/export.
+ *
+ * Trois onglets :
+ *  - Opérations        : saisie, calculs automatiques, traçabilité
+ *  - Référentiel SDG   : données de référence importées de l'outil financier
+ *  - Comparaison       : écarts budget/dépense entre deux années
+ *
+ * Principe de rendu : chaque modification (saisie, import, suppression)
+ * modifie le localStorage puis redéclenche render() — l'affichage est
+ * toujours recalculé depuis la source de vérité unique.
+ */
 const {
   OPERATION_COLUMNS, OPERATION_FIELDS, NUMERIC_FIELDS, SDG_COLUMNS, SDG_FIELDS, SDG_TYPES, BUDGET_STEPS,
   computeDerived, emptyOperation, operationYear,
@@ -10,14 +22,18 @@ const {
 } = window.Budget;
 
 const msg = document.getElementById('msg');
+
+/** Champs recalculés automatiquement : affichés en lecture seule. */
 const isComputed = (f) => f === 'credit_restant' || f === 'quantite_restante' || f === 'budget_prevu';
 
+/** Notification éphémère en bas à droite de l'écran. */
 function notify(text) {
   msg.textContent = text;
   msg.style.display = 'block';
   setTimeout(() => { msg.style.display = 'none'; }, 2500);
 }
 
+/** Déclenche le téléchargement d'un CSV (BOM UTF-8 pour Excel). */
 function download(filename, csv) {
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
@@ -27,6 +43,7 @@ function download(filename, csv) {
   URL.revokeObjectURL(a.href);
 }
 
+/** Bascule l'onglet actif ; la comparaison est recalculée à son ouverture. */
 function setTab(name) {
   document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
   document.querySelectorAll('.panel').forEach((p) => p.classList.toggle('active', p.dataset.panel === name));
@@ -37,6 +54,11 @@ document.querySelectorAll('.tab').forEach((tab) => {
   tab.addEventListener('click', () => setTab(tab.dataset.tab));
 });
 
+/**
+ * Rendu générique d'un tableau : en-têtes, lignes via renderRow
+ * (qui alimente tr.dataset.sums pour les totaux), et ligne de totaux
+ * sur les colonnes listées dans sumFields.
+ */
 function renderTable(headEl, bodyEl, footEl, columns, fields, rows, renderRow, sumFields) {
   headEl.innerHTML = '';
   columns.forEach((name) => {
@@ -66,6 +88,13 @@ function renderTable(headEl, bodyEl, footEl, columns, fields, rows, renderRow, s
   return sums;
 }
 
+/**
+ * Rendu de l'onglet Opérations.
+ * Colonnes calculées affichées en lecture seule ; les autres sont éditables.
+ * Traçabilité : modifier un budget, une dépense ou une quantité ajoute
+ * automatiquement une entrée datée dans le commentaire de la ligne,
+ * avec les valeurs avant/après de tous les champs impactés.
+ */
 function renderOperations() {
   const rows = loadOperations();
   const sums = renderTable(
@@ -103,20 +132,22 @@ function renderOperations() {
           input.value = row[field] ?? '';
           input.addEventListener('change', () => {
             const rows = loadOperations();
+            // Photo avant/après pour détecter ce que la saisie a changé
+            // (un budget modifie aussi le budget prévu, d'où computeDerived).
             const previous = computeDerived(rows[rowIndex]);
             rows[rowIndex][field] = input.value;
             const next = computeDerived(rows[rowIndex]);
-            const changes = [];
-            if (BUDGET_STEPS.includes(OPERATION_COLUMNS[OPERATION_FIELDS.indexOf(field)]) ||
-                ['depense_realisee', 'quantite_prevue', 'quantite_achetee'].includes(field)) {
+            const isStepField = BUDGET_STEPS.includes(OPERATION_COLUMNS[OPERATION_FIELDS.indexOf(field)]);
+            if (isStepField || ['depense_realisee', 'quantite_prevue', 'quantite_achetee'].includes(field)) {
+              const changes = [];
               for (const f of ['budget_prevu', 'depense_realisee', 'quantite_prevue', 'quantite_achetee']) {
                 if (String(previous[f] ?? '') !== String(next[f] ?? '')) {
                   changes.push(`${f} : ${previous[f] ?? '—'} → ${next[f] ?? '—'}`);
                 }
               }
-            }
-            if (changes.length) {
-              rows[rowIndex] = appendComment(rows[rowIndex], changes.join(' ; '));
+              if (changes.length) {
+                rows[rowIndex] = appendComment(rows[rowIndex], changes.join(' ; '));
+              }
             }
             saveOperations(rows);
             render();
@@ -149,6 +180,11 @@ function renderOperations() {
     ' — Crédit restant total : ' + (sums.credit_restant || 0).toLocaleString('fr-FR');
 }
 
+/**
+ * Rendu du référentiel SDG. Le type (Fonctionnement/Investissement)
+ * est une liste déroulante : la valeur déduite de l'import peut être
+ * corrigée à la main. Compteurs par type affichés sous le tableau.
+ */
 function renderSdg() {
   const rows = loadSdg();
   const sdgTypes = new Map(SDG_TYPES.map((t) => [t, 0]));
@@ -215,10 +251,18 @@ function renderSdg() {
     ', Investissement : ' + (sdgTypes.get('Investissement') || 0);
 }
 
+/**
+ * Rendu de la comparaison annuelle.
+ * Appariement des lignes des deux années par clé "numéro|SDG|sous-type"
+ * (le numéro est le code opération sans l'année) : une ligne présente dans
+ * une seule année apparaît quand même, avec des zéros de l'autre côté.
+ * Écarts colorés : vert = hausse, rouge = baisse.
+ */
 function renderComparison() {
   const years = knownYears();
   const selA = document.getElementById('cmp-year-a');
   const selB = document.getElementById('cmp-year-b');
+  // Conservation du choix précédent si l'année existe encore
   const keepA = selA.value, keepB = selB.value;
   [selA, selB].forEach((sel) => { sel.innerHTML = ''; });
   years.forEach((y) => {
@@ -292,6 +336,7 @@ function renderComparison() {
     allKeys.length + ' lignes comparées entre ' + (yearA || '—') + ' et ' + (yearB || '—');
 }
 
+/** Rerendu complet des trois onglets. */
 function render() {
   renderOperations();
   renderSdg();
@@ -329,9 +374,13 @@ document.getElementById('export-sdg').addEventListener('click', () => {
   notify('Export CSV téléchargé');
 });
 
+/**
+ * Création d'une nouvelle année : duplication de la structure de l'année
+ * source vers l'année cible (budgets et consommations remis à zéro).
+ */
 document.getElementById('duplicate-year').addEventListener('click', () => {
-  const source = document.getElementById('duplicate-source').value;
-  const target = document.getElementById('duplicate-target').value;
+  const source = document.getElementById('duplicate-source').value.trim();
+  const target = document.getElementById('duplicate-target').value.trim();
   if (!source || !target || source === target) { notify('Renseignez une année source et une année cible distinctes'); return; }
   try {
     const count = duplicateYear(source, target, { copyBudgets: false });
@@ -345,6 +394,12 @@ document.getElementById('duplicate-year').addEventListener('click', () => {
 document.getElementById('cmp-year-a').addEventListener('change', renderComparison);
 document.getElementById('cmp-year-b').addEventListener('change', renderComparison);
 
+/**
+ * Import CSV des opérations. Deux formats acceptés :
+ *  1. aligné : colonnes dans l'ordre attendu (export de l'application) ;
+ *  2. libre  : en-têtes reconnus par leur début d'intitulé, dans n'importe
+ *              quel ordre ; sinon l'import est refusé avec le format attendu.
+ */
 document.getElementById('op-file-input').addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -367,6 +422,11 @@ document.getElementById('op-file-input').addEventListener('change', async (event
   event.target.value = '';
 });
 
+/**
+ * Import CSV du référentiel SDG : les colonnes de l'outil financier sont
+ * reconnues par mots-clés (sdg/code, libellé/intitulé, type/nature,
+ * ligne/imputation). Les lignes sans code SDG sont ignorées.
+ */
 document.getElementById('sdg-file-input').addEventListener('change', async (event) => {
   const file = event.target.files[0];
   if (!file) return;
